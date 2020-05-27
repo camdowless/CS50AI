@@ -194,7 +194,17 @@ class MinesweeperAI:
         """
         self.moves_made.add(cell)  # 1
         self.mark_safe(cell)  # 2
-        self.knowledge.append(Sentence(self.get_neighbors(cell), count))  # 3
+        cells = []
+        for i in range(cell[0] - 1, cell[0] + 2):
+            for j in range(cell[1] - 1, cell[1] + 2):
+                if (i, j) == cell:
+                    continue
+                if 0 <= i < self.height and 0 <= j < self.width:
+                    if (i, j) in self.mines:
+                        count -= 1
+                    elif (i, j) not in self.safes:
+                        cells.append((i, j))
+        self.knowledge.append(Sentence(cells, count))
 
         # 4
         for sentence in self.knowledge:
@@ -204,16 +214,19 @@ class MinesweeperAI:
                 self.safes = self.safes.union(safe)
             if mine is not None:
                 self.mines = self.mines.union(mine)
-            if sentence.count == 0:
-                self.knowledge.remove(sentence)
-
         # 5
         for sentence1 in self.knowledge:
             for sentence2 in self.knowledge:
-                if not sentence1 == sentence2 and sentence1.cells.issubset(sentence2.cells):
-                    count = sentence2.count - sentence1.count
+                if sentence1.cells.issubset(sentence2.cells):
                     cells = sentence2.cells - sentence1.cells
-                    self.knowledge.append(Sentence(cells, count))
+                    new = Sentence(cells, sentence2.count - sentence1.count)
+                    if new not in self.knowledge:
+                        self.knowledge.append(new)
+                elif sentence2.cells.issubset(sentence1.cells):
+                    cells = sentence1.cells - sentence2.cells
+                    new = Sentence(cells, sentence1.count - sentence2.count)
+                    if new not in self.knowledge:
+                        self.knowledge.append(new)
 
     def get_neighbors(self, cell):
         neighbors = set()
@@ -233,10 +246,8 @@ class MinesweeperAI:
         This function may use the knowledge in self.mines, self.safes
         and self.moves_made, but should not modify any of those values.
         """
-        if self.safes is None:
-            return None
         for cell in self.safes:
-            if cell not in self.moves_made and cell not in self.mines:
+            if cell not in self.moves_made:
                 return cell
 
     def make_random_move(self):
@@ -247,12 +258,8 @@ class MinesweeperAI:
             2) are not known to be mines
         """
 
-        cell = self.get_random()
-        if cell not in self.moves_made and cell not in self.mines:
-            return cell
-        return self.make_random_move()
-
-    def get_random(self):
-        i = random.randrange(self.height)
-        j = random.randrange(self.width)
-        return i, j
+        for i in range(self.height):
+            for j in range(self.width):
+                if (i, j) not in self.moves_made and (i, j) not in self.mines:
+                    return i, j
+        return None
