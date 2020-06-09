@@ -177,7 +177,10 @@ class CrosswordCreator():
                 if x != y:
                     if not self.good_overlap(x, y, assignment):
                         return False
-        return True
+        if len(assignment.values()) == len(set(assignment.values())):
+            return True
+        else:
+            return False
 
     def good_overlap(self, x, y, assignment):
         overlap = self.crossword.overlaps[x, y]
@@ -198,17 +201,17 @@ class CrosswordCreator():
         """
         words = self.domains[var]
         neighbors = self.crossword.neighbors(var)
-        num_ruled_out = []
+        cnts = []
+        for word in words:
+            cnt = 0
+            for neighbor in neighbors:
+                if neighbor not in assignment and word in self.domains[neighbor]:
+                    cnt += 1
+            cnts.append(cnt)
+        tmp = list(zip(words, cnts))
+        tmp.sort(key=lambda x: -x[1])
 
-        for w in words:
-            count = 0
-            for n in neighbors:
-                if n not in assignment and w in self.domains[n]:
-                    count += 1
-            num_ruled_out.append(count)
-        temp = list(zip(words, num_ruled_out))
-        temp.sort(key=lambda x: -x[1])
-        return [word[0] for word in temp]
+        return [word[0] for word in tmp]
 
     def select_unassigned_variable(self, assignment):
         """
@@ -221,8 +224,9 @@ class CrosswordCreator():
         variable = list(self.crossword.variables - set(assignment.keys()))
         num_remain = [len(self.domains[var]) for var in variable]
         degree = [len(self.crossword.neighbors(var)) for var in variable]
-        temp = list(zip(variable, num_remain, degree))
-        def compare(x, y):
+        tmp = list(zip(variable, num_remain, degree))
+
+        def cmp(x, y):
             if x[1] != y[1]:
                 if x[1] > y[1]:
                     return 1
@@ -235,8 +239,10 @@ class CrosswordCreator():
                     return -1
                 else:
                     return 0
-        sorted(temp, key=functools.cmp_to_key(compare))
-        return temp[0][0]
+
+        sorted(tmp, key=functools.cmp_to_key(cmp))
+
+        return tmp[0][0]
 
     def backtrack(self, assignment):
         """
